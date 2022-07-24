@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Rod in AWS Lambda
+
+Resources:
+  GetPageHTMLFunction:
+    Type: AWS::Serverless::Function
+    Properties: # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html
+      PackageType: Image
+      Architectures:
+        - x86_64
+      MemorySize: 1200
+      Timeout: 10
+      Events: # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-api.html
+        GetPageHTML:
+          Type: Api
+          Properties:
+            Method: get
+            Path: /get-page-html
+            RequestParameters:
+              - method.request.querystring.url:
+                  Required: true
+                  Caching: false
+    Metadata:
+      DockerTag: latest
+      DockerContext: ./
+      Dockerfile: ./Dockerfile
