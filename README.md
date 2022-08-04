@@ -11,7 +11,7 @@ then test it out in the console with this Event JSON:
   "path": "/",
   "httpMethod": "GET",
   "queryStringParameters": {
-    "url": "uber.com"
+    "url": "https://www.uber.com"
   }
 }
 ```

@@ -79,7 +79,7 @@ func getPageHTML(url string) (string, error) {
 	go router.Run()
 
 	err := rod.Try(func() {
-		page.Timeout(timeout * time.Second).MustNavigate("http://www." + url).MustWaitLoad()
+		page.Timeout(timeout * time.Second).MustNavigate(url).MustWaitLoad()
 	})
 
 	if err != nil {
