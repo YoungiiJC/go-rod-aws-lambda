@@ -5,6 +5,8 @@ import (
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
+	"github.com/ssoroka/slice"
 )
 
 func launchInLambda() *launcher.Launcher {
@@ -52,16 +54,41 @@ func getPageHTML(url string) (string, error) {
 	browser = rod.New().ControlURL(u).MustConnect()
 	defer browser.MustClose()
 
-	// visit the page
-	var page *rod.Page
+	page := browser.MustPage()
+
+	// Block loading any resources we don't need in headless
+	// https://go-rod.github.io/#/network?id=blocking-certain-resources-from-loading
+	router := page.HijackRequests()
+
+	resources := []proto.NetworkResourceType{
+		proto.NetworkResourceTypeFont,
+		proto.NetworkResourceTypeImage,
+		proto.NetworkResourceTypeMedia,
+		proto.NetworkResourceTypeStylesheet,
+	}
+
+	router.MustAdd("*", func(ctx *rod.Hijack) {
+		if slice.Contains(resources, ctx.Request.Type()) {
+			ctx.Response.Fail(proto.NetworkErrorReasonBlockedByClient)
+			return
+		}
+
+		ctx.ContinueRequest(&proto.FetchContinueRequest{})
+	})
+
+	go router.Run()
+
 	err := rod.Try(func() {
-		page = browser.Timeout(timeout * time.Second).MustPage("http://www." + url)
+		page.Timeout(timeout * time.Second).MustNavigate("http://www." + url).MustWaitLoad()
 	})
 
 	if err != nil {
 		return "", err
 	}
 
-	// return the entire html
+	// wait until the body loads
+	page.MustElement("body")
+
+	// then return the entire html
 	return page.MustElement("html").MustHTML(), nil
 }
