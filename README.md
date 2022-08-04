@@ -18,7 +18,7 @@ then test it out in the console with this Event JSON:
 
 or hit the endpoint directly:
 ```bash
-curl <your_lambda_api_gateway_uri>?url=uber.com
+curl <your_lambda_api_gateway_uri>?url=https://www.uber.com
 ```
 
 Feel free to open an issue with questions or a PR if we could be doing something better!
