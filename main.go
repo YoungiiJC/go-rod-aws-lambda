@@ -11,7 +11,7 @@ import (
 func resp(body string, status int) (*events.APIGatewayProxyResponse, error) {
 	return &events.APIGatewayProxyResponse{
 		StatusCode: status,
-		Headers:    map[string]string{"Content-Type": "application/json"},
+		Headers:    map[string]string{"Content-Type": "text/html"},
 		Body:       body,
 	}, nil
 }
