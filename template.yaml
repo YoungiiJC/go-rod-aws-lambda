@@ -11,6 +11,8 @@ Resources:
         - x86_64
       MemorySize: 1200
       Timeout: 10
+      EphemeralStorage:
+        Size: 10240
       Events: # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-api.html
         GetPageHTML:
           Type: Api
