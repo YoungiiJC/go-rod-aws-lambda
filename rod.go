@@ -16,7 +16,7 @@ func launchInLambda() *launcher.Launcher {
 		Bin("/opt/chromium").
 
 		// no need to use leakless on aws-lambda, lambda will ensure no process leak
-		Leakless(false).
+		Leakless(true).
 
 		// recommended flags to run in serverless environments
 		// see https://github.com/alixaxel/chrome-aws-lambda/blob/master/source/index.ts
@@ -50,10 +50,9 @@ func getPageHTML(url string) (string, error) {
 
 	// create a Rod browser instance
 	var browser *rod.Browser
-	u := launchInLambda().MustLaunch()
+	launcher := launchInLambda()
+	u := launcher.MustLaunch()
 	browser = rod.New().ControlURL(u).MustConnect()
-	defer browser.MustClose()
-
 	page := browser.MustPage()
 
 	// Block loading any resources we don't need in headless
@@ -89,6 +88,13 @@ func getPageHTML(url string) (string, error) {
 	// wait until the body loads
 	page.MustElement("body")
 
+	html := page.MustElement("html").MustHTML()
+
+	// lambda may reuse a container's environment for warm starts.
+	// we must totally kill the browser process, otherwise consecutively calling
+	// this program will compound memory usage per browser launcher each invocation.
+	launcher.Kill()
+
 	// then return the entire html
-	return page.MustElement("html").MustHTML(), nil
+	return html, nil
 }
