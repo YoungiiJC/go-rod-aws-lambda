@@ -15,9 +15,6 @@ func launchInLambda() *launcher.Launcher {
 		// where lambda runtime stores chromium
 		Bin("/opt/chromium").
 
-		// no need to use leakless on aws-lambda, lambda will ensure no process leak
-		Leakless(true).
-
 		// recommended flags to run in serverless environments
 		// see https://github.com/alixaxel/chrome-aws-lambda/blob/master/source/index.ts
 		Set("allow-running-insecure-content").
