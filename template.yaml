@@ -9,8 +9,8 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
-      MemorySize: 1200
-      Timeout: 10
+      MemorySize: 1200 # for just getting html, memory very infrequently goes above 1000
+      Timeout: 20
       Events: # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-api.html
         GetPageHTML:
           Type: Api
