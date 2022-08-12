@@ -43,10 +43,10 @@ func launchInLambda() *launcher.Launcher {
 
 func getPageHTML(url string) (string, error) {
 	// we want Rod to timeout before the lambda function
-	// so we can ensure that the browser is properly killed
-	// average website load time is ~10 seconds
-	// let's be a little liberal here :p
-	const timeout = 15 * time.Second // lambda fn timeout=20
+	// so we can ensure that the browser is properly closed and cleaned up
+	//
+	// lambda fn timeout=20
+	const timeout = 15 * time.Second // average website load time on desktop is ~10 seconds
 
 	var html string
 
