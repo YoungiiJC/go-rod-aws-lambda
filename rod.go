@@ -61,8 +61,7 @@ func getPageHTML(url string) (string, error) {
 		u := launcher.MustLaunch()
 
 		// create a browser instance
-		var browser *rod.Browser
-		browser = rod.New().ControlURL(u).MustConnect()
+		browser := rod.New().ControlURL(u).MustConnect()
 
 		// open a page
 		page := browser.MustPage()
