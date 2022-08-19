@@ -41,19 +41,19 @@ func launchInLambda() *launcher.Launcher {
 		Set("window-size", "1920", "1080")
 }
 
-func getPageHTML(url string) (string, error) {
+func getPageHTML(url string) (html string, err error) {
 	// If Rod fails, it needs to correctly timeout before the timeout we set as the lambda fn's timeout
 	// this ensures that the browser instance is properly killed and cleaned up
 	//
 	// these timeouts should collectively be less than the timeout we set for the lambda
-	const navigateTimeout = 5 * time.Second
-	const navigationTimeout = 5 * time.Second
-	const requestIdleTimeout = 10 * time.Second
-	const htmlTimeout = 5 * time.Second
+	const (
+		navigateTimeout    = 5 * time.Second
+		navigationTimeout  = 5 * time.Second
+		requestIdleTimeout = 10 * time.Second
+		htmlTimeout        = 5 * time.Second
+	)
 
-	var html string
-
-	err := rod.Try(func() {
+	err = rod.Try(func() {
 		// instantiate the chromium launcher
 		launcher := launchInLambda()
 
