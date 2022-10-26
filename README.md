@@ -1,12 +1,14 @@
-Basic [Rod](https://github.com/go-rod/rod) implementation in AWS Lambda. Spins up an API Gateway endpoint.
+Basic [Rod](https://github.com/go-rod/rod) implementation in AWS Lambda. Spins up a [function url](https://docs.aws.amazon.com/lambda/latest/dg/lambda-urls.html).
 
 Deploy it via the AWS SAM cli:
+
 ```bash
 sam build && sam deploy --guided
 ```
 
 then test it out in the console with this Event JSON:
-```js
+
+```json
 {
   "path": "/",
   "httpMethod": "GET",
@@ -17,8 +19,9 @@ then test it out in the console with this Event JSON:
 ```
 
 or hit the endpoint directly:
+
 ```bash
-curl <your_lambda_api_gateway_uri>?url=https://www.uber.com
+curl <your_function_url>?url=https://www.uber.com
 ```
 
 Feel free to open an issue with questions or a PR if we could be doing something better!

@@ -11,16 +11,8 @@ Resources:
         - x86_64
       MemorySize: 1200 # for just getting html, memory very infrequently goes above 1000
       Timeout: 30
-      Events: # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-api.html
-        GetPageHTML:
-          Type: Api
-          Properties:
-            Method: get
-            Path: /get-page-html
-            RequestParameters:
-              - method.request.querystring.url:
-                  Required: true
-                  Caching: false
+      FunctionUrlConfig: # creates a function url
+        AuthType: NONE
     Metadata:
       DockerTag: latest
       DockerContext: ./
