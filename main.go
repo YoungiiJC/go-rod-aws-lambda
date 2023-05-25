@@ -28,7 +28,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*event
 
 	// get the page's html
 	html, err := getPageHTML(url)
-	if nil != err {
+	if err != nil {
 		err := fmt.Sprintf("Failed to fetch page HTML. Error: %s", err.Error())
 		return resp(err, 500)
 	}
