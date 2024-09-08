@@ -22,7 +22,7 @@ FROM public.ecr.aws/lambda/provided:al2 as chromium
 # install brotli, so we can decompress chromium
 # we don't have access to brotli out of the box, to install we first need epel
 # https://docs.fedoraproject.org/en-US/epel/#what_is_extra_packages_for_enterprise_linux_or_epel
-RUN yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && \
+RUN yum -y install https://mirrors.vcea.wsu.edu/centos-vault/epel-7/x86_64/Packages/e/epel-release-7-14.noarch.rpm && \
     yum -y install brotli && \
     yum clean all
 
