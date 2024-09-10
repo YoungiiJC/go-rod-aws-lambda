@@ -1,0 +1,41 @@
+{
+    "resource": "/",
+    "path": "/",
+    "httpMethod": "GET",
+    "headers": {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    },
+    "queryStringParameters": {
+        "url": "https://example.com",
+        "email": "coderbadass@gmail.com",
+        "password": "ticketMaster12@!",
+        "proxy": "http://FdghoqsJds:sOIfAmKg0n@209.20.207.255:13160"
+    },
+    "pathParameters": null,
+    "stageVariables": null,
+    "requestContext": {
+        "accountId": "123456789012",
+        "resourceId": "abcd1234",
+        "stage": "test",
+        "requestId": "abcdef12-3456-7890-abcd-ef1234567890",
+        "requestTime": "10/Mar/2022:12:34:56 +0000",
+        "requestTimeEpoch": 1646910896000,
+        "identity": {
+            "apiKey": "",
+            "userArn": "",
+            "cognitoAuthenticationType": "",
+            "cognitoIdentityPoolId": "",
+            "cognitoIdentityId": "",
+            "userAgent": "Custom User Agent String",
+            "accountId": "",
+            "sourceIp": "127.0.0.1",
+            "caller": "",
+            "user": ""
+        },
+        "resourcePath": "/",
+        "httpMethod": "GET"
+    },
+    "body": null,
+    "isBase64Encoded": false
+}

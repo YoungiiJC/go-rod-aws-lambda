@@ -10,7 +10,7 @@ Resources:
       Architectures:
         - x86_64
       MemorySize: 1200 # for just getting html, memory very infrequently goes above 1000
-      Timeout: 30
+      Timeout: 120 # 2 minutes
       FunctionUrlConfig: # creates a function url
         AuthType: NONE
     Metadata:

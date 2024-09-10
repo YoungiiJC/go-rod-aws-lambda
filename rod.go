@@ -1,15 +1,45 @@
 package main
 
 import (
+	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/devices"
+	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/ssoroka/slice"
+	"github.com/go-rod/stealth"
+	// "github.com/ssoroka/slice"
 )
 
-func launchInLambda() *launcher.Launcher {
+func Wait(seconds int) {
+	duration := time.Duration(seconds) * time.Second
+	ticker := time.NewTicker(duration)
+	defer ticker.Stop()
+
+	// Wait for the ticker to send a value, which happens after the specified duration.
+	<-ticker.C
+}
+
+type Event struct {
+	Date      string
+	EventName string
+	Location  string
+	OrderID   string
+}
+
+func slowInput(element *rod.Element, text string, delay time.Duration) {
+	for _, char := range text {
+		element.MustInput(string(char))
+		time.Sleep(delay)
+	}
+}
+
+func launchInLambda(proxy string) *launcher.Launcher {
+	fmt.Print("proxy: ", proxy)
 	return launcher.New().
 		// where lambda runtime stores chromium
 		Bin("/opt/chromium").
@@ -38,24 +68,45 @@ func launchInLambda() *launcher.Launcher {
 		Set("no-zygote").
 		Set("single-process").
 		Set("use-gl", "swiftshader").
-		Set("window-size", "1920", "1080")
+		Set("window-size", "1920", "1080").
+		Delete("use-mock-keychain").
+		Headless(false).
+		Devtools(false).
+		Proxy(proxy).
+		Set("proxy-server", proxy)
 }
+func extractURLParts(urlString string) (username, password, httpIPPort string, err error) {
+	// Parse the URL
+	parsedURL, err := url.Parse(urlString)
+	if err != nil {
+		return "", "", "", err
+	}
 
-func getPageHTML(url string) (html string, err error) {
-	// If Rod fails, it needs to correctly timeout before the timeout we set as the lambda fn's timeout
-	// this ensures that the browser instance is properly killed and cleaned up
-	//
-	// these timeouts should collectively be less than the timeout we set for the lambda
-	const (
-		navigateTimeout    = 5 * time.Second
-		navigationTimeout  = 5 * time.Second
-		requestIdleTimeout = 10 * time.Second
-		htmlTimeout        = 5 * time.Second
-	)
+	// Extract username and password
+	if parsedURL.User != nil {
+		username = parsedURL.User.Username()
+		password, _ = parsedURL.User.Password()
+	}
+
+	// Extract http://ip:port
+	httpIPPort = fmt.Sprintf("http://%s", parsedURL.Host)
+
+	return username, password, httpIPPort, nil
+}
+func getPageHTML(website string, email string, password string, proxyURL string) (html string, err error) {
+	fmt.Println(website)
+	html = ""
 
 	err = rod.Try(func() {
+
+		username, proxyPassword, proxy, err := extractURLParts(proxyURL)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+
 		// instantiate the chromium launcher
-		launcher := launchInLambda()
+		launcher := launchInLambda(proxy)
 
 		// lambda warm starts reuse environments:
 		//
@@ -73,48 +124,161 @@ func getPageHTML(url string) (html string, err error) {
 
 		// create a browser instance
 		browser := rod.New().ControlURL(u).MustConnect()
+		defer browser.Close()
+		go browser.MustHandleAuth(username, proxyPassword)()
+		time.Sleep(3 * time.Second)
+
+		browser.Page(proto.TargetCreateTarget{})
+		browser.MustIgnoreCertErrors(true)
+		page := stealth.MustPage(browser)
 
 		// open a page
-		page := browser.MustPage()
 
 		// Block loading any resources we don't need in headless
 		// https://go-rod.github.io/#/network?id=blocking-certain-resources-from-loading
-		router := page.HijackRequests()
+		// router := page.HijackRequests()
 
-		resources := []proto.NetworkResourceType{
-			proto.NetworkResourceTypeFont,
-			proto.NetworkResourceTypeImage,
-			proto.NetworkResourceTypeMedia,
-			proto.NetworkResourceTypeStylesheet,
-			proto.NetworkResourceTypeWebSocket, // we don't need websockets to fetch html
-		}
+		// resources := []proto.NetworkResourceType{
+		// 	proto.NetworkResourceTypeFont,
+		// 	proto.NetworkResourceTypeImage,
+		// 	proto.NetworkResourceTypeMedia,
+		// 	proto.NetworkResourceTypeStylesheet,
+		// 	proto.NetworkResourceTypeWebSocket, // we don't need websockets to fetch html
+		// }
 
-		router.MustAdd("*", func(ctx *rod.Hijack) {
-			if slice.Contains(resources, ctx.Request.Type()) {
-				ctx.Response.Fail(proto.NetworkErrorReasonBlockedByClient)
-				return
-			}
+		// router.MustAdd("*", func(ctx *rod.Hijack) {
+		// 	if slice.Contains(resources, ctx.Request.Type()) {
+		// 		ctx.Response.Fail(proto.NetworkErrorReasonBlockedByClient)
+		// 		return
+		// 	}
 
-			ctx.ContinueRequest(&proto.FetchContinueRequest{})
-		})
+		// 	ctx.ContinueRequest(&proto.FetchContinueRequest{})
+		// })
 
-		go router.Run()
+		// go router.Run()
 
 		// go to the url
-		page.Timeout(navigateTimeout).MustNavigate(url)
+		page.MustEmulate(devices.IPhoneX)
 
-		// follow any redirects
-		// https://github.com/go-rod/rod/issues/640#issuecomment-1171941374
-		waitNavigation := page.Timeout(navigationTimeout).MustWaitNavigation()
-		waitNavigation()
+		page.MustNavigate("https://api.ipify.org")
 
-		// wait until requests stop firing so we can get
-		// any html rendered by js scripts or iframes
-		waitRequestIdle := page.Timeout(requestIdleTimeout).MustWaitRequestIdle()
-		waitRequestIdle()
+		content := page.MustElement("body").MustText()
 
-		// return the html
-		html = page.Timeout(htmlTimeout).MustElement("html").MustHTML()
+		println("IP address:", content)
+
+		page.MustNavigate("https://bot.sannysoft.com/")
+
+		page.MustWaitLoad()
+		page.MustWaitIdle()
+		page.MustWaitStable().MustScreenshot("bot-result.png")
+		page.MustNavigate("https://www.google.com/")
+		// Wait(4)
+		page.MustWaitLoad()
+		page.MustWaitIdle()
+		page.MustNavigate("https://www.ticketmaster.com/")
+		page.MustWaitNavigation()
+		Wait(4)
+		page.MustWaitLoad()
+
+		page.MustWaitIdle()
+		// Wait(3)
+		err = rod.Try(func() {
+			page.Timeout(5 * time.Second).MustElementX("//button[.//span[text()='Close banner']]").MustClick()
+		})
+
+		if err != nil {
+			fmt.Println("Banner close button not found or couldn't be clicked, continuing...")
+		} else {
+			fmt.Println("Banner close button clicked successfully")
+		}
+		// Wait(3)
+		button := page.MustElementX("//button[@data-testid=\"accountLink\"]")
+		button.MustWaitVisible()
+		button.MustClick()
+		page.MustWaitNavigation()
+		fmt.Println("Clicked on Login...")
+		page.MustWaitLoad()
+		page.MustWaitIdle()
+		// email := "chessandmovies@gmail.com"
+		// password := "THankyou12@!@!"
+		emailInput := page.MustElementX("//input[@name='email']")
+		slowInput(emailInput, email, 200*time.Millisecond)
+
+		passwordInput := page.MustElementX("//input[@name='password']")
+		slowInput(passwordInput, password, 200*time.Millisecond)
+		Wait(2)
+
+		submitButton := page.MustElementX("//input[@type='submit'] | //button[@type='submit']")
+		if submitButton != nil {
+			submitButton.MustClick()
+		} else {
+			passwordInput.MustType(input.Enter)
+		}
+		fmt.Println("Login submitted...")
+
+		page.MustWaitNavigation()
+
+		page.MustWaitLoad()
+
+		page.MustWaitIdle()
+		page.MustWaitNavigation()
+
+		page.MustWaitStable()
+		page.MustNavigate("https://www.ticketmaster.com/user/orders/past-events")
+		fmt.Println("Page moved to past events")
+		page.MustWaitNavigation()
+
+		page.MustWaitLoad()
+		page.MustWaitIdle()
+		Wait(3)
+		acceptButton, err := page.Timeout(5 * time.Second).Element("button#onetrust-accept-btn-handler")
+		if err == nil {
+			acceptButton.MustClick()
+			page.MustWaitStable()
+			fmt.Println("Accepted Cookies")
+		}
+
+		ul, err := page.Timeout(10 * time.Second).Element("ul[data-testid='pastOrdersList']")
+		if err != nil {
+			fmt.Println("No orders found.")
+		} else {
+			items := ul.MustElements("li")
+			fmt.Printf("Number of events found: %d\n", len(items))
+			events := []Event{}
+
+			for _, item := range items {
+				date := item.MustElement("time span").MustText()
+				// fmt.Println("Date:", date)
+
+				eventName := item.MustElement("h2").MustText()
+				// fmt.Println("Event Name:", eventName)
+
+				location := item.MustElement("div > div:nth-child(3)").MustText()
+				// fmt.Println("Location:", location)
+
+				orderID := item.MustElement("div > div:nth-child(2) > div").MustText()
+				// fmt.Println("Order ID:", orderID)
+
+				events = append(events, Event{
+					Date:      date,
+					EventName: eventName,
+					Location:  location,
+					OrderID:   orderID,
+				})
+			}
+
+			var eventString strings.Builder
+
+			for _, event := range events {
+				eventString.WriteString(fmt.Sprintf("Date: %s, Event Name: %s, Location: %s, Order ID: %s\n",
+					event.Date, event.EventName, event.Location, event.OrderID))
+			}
+			html = eventString.String()
+
+			fmt.Println("Data has been scraped and saved to events.txt")
+		}
+		// Wait(10000)
+		fmt.Print("Done. Exiting")
 	})
 
 	if err != nil {

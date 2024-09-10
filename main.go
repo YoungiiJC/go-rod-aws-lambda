@@ -1,8 +1,10 @@
+
 package main
 
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -17,20 +19,41 @@ func resp(body string, status int) (*events.APIGatewayProxyResponse, error) {
 }
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	const requiredQueryParameter = "url"
+	const (
+		urlParam      = "url"
+		emailParam    = "email"
+		passwordParam = "password"
+		proxyParam    = "proxy"
+	)
+	var requiredQueryParameters = []string{urlParam, emailParam, passwordParam, proxyParam}
 
-	// parse the request
-	url, ok := request.QueryStringParameters[requiredQueryParameter]
-	if !ok {
-		err := fmt.Sprintf(`Query parameter "%s" is missing or incorrect`, requiredQueryParameter)
-		return resp(err, 400)
+	// Log the received query parameters
+	log.Printf("Received query parameters: %v", request.QueryStringParameters)
+
+	// Parse the request
+	for _, requiredQueryParameter := range requiredQueryParameters {
+		value, ok := request.QueryStringParameters[requiredQueryParameter]
+		if !ok || value == "" {
+			err := fmt.Sprintf(`Query parameter "%s" is missing or incorrect`, requiredQueryParameter)
+			log.Println(err)
+			return resp(err, 400)
+		}
 	}
 
-	// get the page's html
-	html, err := getPageHTML(url)
+	urle := request.QueryStringParameters[urlParam]
+	email := request.QueryStringParameters[emailParam]
+	password := request.QueryStringParameters[passwordParam]
+	proxy := request.QueryStringParameters[proxyParam]
+
+	// Log the parsed parameters
+	log.Printf("Parsed parameters - URL: %s, Email: %s, Password: %s, Proxy: %s", urle, email, password, proxy)
+
+	// Get the page's HTML
+	html, err := getPageHTML(urle, email, password, proxy)
 	if err != nil {
-		err := fmt.Sprintf("Failed to fetch page HTML. Error: %s", err.Error())
-		return resp(err, 500)
+		errMsg := fmt.Sprintf("Failed to fetch page HTML. Error: %s", err.Error())
+		log.Println(errMsg)
+		return resp(errMsg, 500)
 	}
 
 	return resp(html, 200)
